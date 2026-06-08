@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de tiendas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F2F5FA;}@keyframes spin{to{transform:rotate(360deg);}}
+:root{
+  --navy:#0B1F3A;--navy2:#0F2847;--navy3:#163660;
+  --orange:#E8661A;--orange-l:#F5894D;--orange-bg:#FEF0E7;--orange-text:#8A3500;
+  --white:#fff;--surface:#F2F5FA;--border:#DDE3EE;--border2:#C4CEDF;
+  --text1:#0B1F3A;--text2:#4A5568;--text3:#8896A8;
+  --red-bg:#FCEBEB;--red-txt:#A32D2D;--red-btn:#E24B4A;
+}
+svg.ico{display:inline-block;vertical-align:middle;flex-shrink:0;}
+.topbar{background:var(--navy);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;gap:12px;position:sticky;top:0;z-index:50;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand-icon{width:36px;height:36px;background:var(--orange);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;}
+.brand-name{font-size:14px;font-weight:600;color:#fff;}
+.brand-sep{width:1px;height:18px;background:rgba(255,255,255,0.15);margin:0 4px;}
+.brand-sub{font-size:12px;color:rgba(255,255,255,0.4);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.user-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:100px;padding:4px 12px 4px 5px;}
+.avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;}
+.av-admin{background:var(--orange);color:#fff;}
+.av-visor{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.85);}
+.uname{font-size:12px;color:rgba(255,255,255,0.9);font-weight:500;}
+.rpill{font-size:10px;padding:2px 7px;border-radius:100px;font-weight:600;}
+.rp-admin{background:var(--orange);color:#fff;}
+.rp-visor{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);}
+.btn-logout{font-size:12px;padding:5px 12px;border-radius:100px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.7);cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+.btn-logout:hover{border-color:rgba(255,255,255,0.5);color:#fff;}
+.layout{display:flex;min-height:calc(100vh - 54px);}
+.sidenav{background:var(--navy2);width:214px;padding:1.25rem 0;display:flex;flex-direction:column;gap:1px;flex-shrink:0;position:sticky;top:54px;height:calc(100vh - 54px);}
+.nav-section{font-size:10px;font-weight:600;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.1em;padding:12px 18px 5px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:13px;color:rgba(255,255,255,0.75);cursor:pointer;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:background 0.12s;}
+.nav-item svg{color:rgba(255,255,255,0.45);flex-shrink:0;}
+.nav-item:hover{background:rgba(255,255,255,0.07);color:#fff;}
+.nav-item:hover svg{color:rgba(255,255,255,0.8);}
+.nav-item.active{background:rgba(232,102,26,0.16);color:#fff;border-left-color:var(--orange);font-weight:500;}
+.nav-item.active svg{color:var(--orange);}
+.nav-divider{height:1px;background:rgba(255,255,255,0.07);margin:8px 0;}
+.main{flex:1;padding:1.75rem;overflow:auto;}
+.page-title{font-size:19px;font-weight:600;color:var(--text1);margin-bottom:3px;}
+.page-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem;}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem;}
+.stat{background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.2rem;border-top:3px solid transparent;}
+.stat-blue{border-top-color:var(--navy3);}
+.stat-orange{border-top-color:var(--orange);}
+.stat-green{border-top-color:#2E7D32;}
+.stat-purple{border-top-color:#5C35B0;}
+.stat-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
+.si-blue{background:#E8EEF8;color:var(--navy3);}
+.si-orange{background:var(--orange-bg);color:var(--orange-text);}
+.si-green{background:#E8F5E9;color:#2E7D32;}
+.si-purple{background:#EDE7F6;color:#5C35B0;}
+.stat-val{font-size:30px;font-weight:600;color:var(--text1);line-height:1;}
+.stat-lbl{font-size:11px;color:var(--text2);margin-top:5px;text-transform:uppercase;letter-spacing:0.05em;}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem;}
+.panel{background:#fff;border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.4rem;}
+.panel-title{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+.panel-title::before{content:'';display:inline-block;width:3px;height:13px;background:var(--orange);border-radius:2px;}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-bottom:12px;max-height:72px;overflow-y:auto;}
+.legend::-webkit-scrollbar{height:4px;width:4px;}.legend::-webkit-scrollbar-track{background:#F2F5FA;}.legend::-webkit-scrollbar-thumb{background:#C4CEDF;border-radius:2px;}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);flex-shrink:0;}
+.legend-item strong{color:var(--text1);font-weight:600;}
+.ldot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.section-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:10px;}
+.filters-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}
+.sbox{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--border);border-radius:100px;padding:7px 14px;flex:1;min-width:200px;}
+.sbox:focus-within{border-color:var(--navy3);}
+.sbox input{border:none;background:transparent;font-size:13px;color:var(--text1);outline:none;width:100%;}
+.sbox input::placeholder{color:var(--text3);}
+.psel{appearance:none;-webkit-appearance:none;background:#fff;border:1px solid var(--border);border-radius:100px;padding:7px 30px 7px 13px;font-size:12px;color:var(--text2);cursor:pointer;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238896A8'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;}
+.psel.on{border-color:var(--navy3);color:var(--navy);font-weight:500;}
+.btn-ghost{font-size:12px;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+.btn-ghost:hover{border-color:var(--border2);color:var(--text1);}
+.btn-navy{font-size:13px;padding:8px 18px;border-radius:8px;border:none;background:var(--navy);color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:7px;font-weight:500;}
+.btn-navy:hover{background:var(--navy3);}
+.btn-orange{font-size:13px;padding:8px 18px;border-radius:8px;border:none;background:var(--orange);color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:7px;font-weight:500;}
+.btn-orange:hover{background:var(--orange-l);}
+.btn-danger-sm{font-size:13px;padding:8px 18px;border-radius:8px;border:none;background:var(--red-btn);color:#fff;cursor:pointer;font-weight:500;}
+.btn-danger-sm:hover{background:var(--red-txt);}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:820px;}
+.tbl thead{background:var(--navy);}
+.tbl th{padding:11px 14px;text-align:left;font-weight:500;font-size:11px;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;}
+.tbl th:first-child{border-radius:11px 0 0 0;}
+.tbl th:last-child{border-radius:0 11px 0 0;}
+.tbl td{padding:11px 14px;color:var(--text1);border-bottom:1px solid var(--border);vertical-align:middle;}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tr:hover td{background:#F5F8FF;}
+.badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:100px;font-weight:500;}
+.bp{background:#E8EEF8;color:var(--navy3);}
+.bs{background:var(--orange-bg);color:var(--orange-text);}
+.mono{font-family:'Courier New',monospace;font-size:12px;color:var(--text2);}
+.act-cell{display:flex;gap:6px;}
+.abt{background:none;border:1px solid transparent;cursor:pointer;font-size:12px;padding:5px 10px;border-radius:7px;display:inline-flex;align-items:center;gap:5px;}
+.abt-e{color:var(--navy3);}.abt-e:hover{background:#E8EEF8;border-color:var(--border2);}
+.abt-d{color:var(--red-txt);}.abt-d:hover{background:var(--red-bg);border-color:#F7C1C1;}
+.empty{text-align:center;padding:3rem;color:var(--text2);font-size:14px;}
+.tcount{font-size:12px;color:var(--text3);margin-top:8px;text-align:right;}
+.breakdown-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.breakdown-tbl th{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em;padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;}
+.breakdown-tbl td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text1);vertical-align:middle;}
+.breakdown-tbl tr:last-child td{border-bottom:none;}
+.breakdown-tbl tr:hover td{background:#F5F8FF;}
+.bar-i{height:5px;border-radius:3px;display:inline-block;vertical-align:middle;}
+.upload-area{background:#fff;border:2px dashed var(--border);border-radius:14px;padding:4rem 2rem;text-align:center;cursor:pointer;transition:background 0.15s,border-color 0.15s;max-width:560px;margin:0 auto;}
+.upload-area:hover{background:#F5F8FF;border-color:var(--navy3);}
+.upload-area svg{display:block;margin:0 auto 18px;opacity:0.3;color:var(--navy3);}
+.upload-area p{font-size:15px;color:var(--text2);font-weight:500;}
+.upload-area span{font-size:13px;color:var(--text3);display:block;margin-top:8px;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(11,31,58,0.6);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.mbox{background:#fff;border-radius:14px;padding:1.75rem;width:500px;max-width:100%;}
+.mhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border);}
+.mhead h2{font-size:17px;font-weight:600;color:var(--text1);}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ff{display:flex;flex-direction:column;gap:5px;}
+.ff label{font-size:12px;color:var(--text2);font-weight:500;}
+.ff input{font-size:13px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--text1);outline:none;}
+.ff input:focus{border-color:var(--navy3);}
+.ff.full{grid-column:1/-1;}
+.mfoot{display:flex;justify-content:flex-end;gap:8px;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);}
+.cbox{background:#fff;border-radius:14px;padding:2rem;width:380px;max-width:100%;text-align:center;}
+.cbox svg{display:block;margin:0 auto 14px;color:var(--red-btn);}
+.cbox h2{font-size:18px;font-weight:600;color:var(--text1);margin-bottom:8px;}
+.cbox p{font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--navy);color:var(--orange-l);font-size:13px;font-weight:500;padding:11px 24px;border-radius:100px;display:none;white-space:nowrap;z-index:300;}
+.toast.show{display:block;}
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--surface);position:relative;overflow:hidden;}
+.login-page::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 55%,#1a4a7a 100%);z-index:0;}
+.login-page::after{content:'';position:absolute;bottom:-120px;right:-80px;width:500px;height:500px;background:rgba(232,102,26,0.12);border-radius:50%;z-index:0;}
+.login-blob{position:absolute;top:-100px;left:-100px;width:400px;height:400px;background:rgba(255,255,255,0.04);border-radius:50%;z-index:0;}
+.login-center{position:relative;z-index:1;width:100%;max-width:420px;padding:1.5rem;}
+.login-brand{text-align:center;margin-bottom:2.25rem;}
+.login-brand-icon{width:64px;height:64px;background:var(--orange);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 8px 24px rgba(232,102,26,0.4);}
+.login-brand h1{font-size:24px;font-weight:700;color:#fff;margin-bottom:6px;letter-spacing:-0.3px;}
+.login-brand p{font-size:13px;color:rgba(255,255,255,0.5);line-height:1.5;}
+.lcard{background:#fff;border-radius:20px;padding:2.25rem;box-shadow:0 20px 60px rgba(11,31,58,0.3);}
+.lf{margin-bottom:16px;}
+.lf label{font-size:12px;color:var(--text2);font-weight:600;display:block;margin-bottom:7px;text-transform:uppercase;letter-spacing:0.04em;}
+.lf input{width:100%;font-size:14px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--text1);outline:none;transition:border-color 0.15s,box-shadow 0.15s;}
+.lf input:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(11,31,58,0.08);}
+.btn-login-full{width:100%;font-size:14px;font-weight:600;padding:13px;border-radius:10px;border:none;background:var(--navy);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px;transition:background 0.15s,transform 0.1s;}
+.btn-login-full:hover{background:var(--navy3);}
+.btn-login-full:active{transform:scale(0.99);}
+.lerr{font-size:12px;color:var(--red-txt);background:var(--red-bg);border-radius:8px;padding:9px 13px;margin-top:12px;display:none;text-align:center;}
+@media(max-width:700px){.stats{grid-template-columns:repeat(2,1fr);}.charts-row{grid-template-columns:1fr;}.sidenav{width:52px;}.nav-item span{display:none;}.nav-section{display:none;}.nav-divider{margin:4px 0;}}
+</style>
+</head>
+<body>
+
+<div id="loginPage" class="login-page">
+  <div class="login-blob"></div>
+  <div class="login-center">
+    <div class="login-brand">
+      <div class="login-brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l1-5h16l1 5"/>
+          <path d="M3 9a2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2"/>
+          <path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/>
+          <path d="M10 15h4v4h-4z"/>
+        </svg>
+      </div>
+      <h1>Dashboard de tiendas</h1>
+      <p>Gestión de proveedores de internet</p>
+    </div>
+    <div class="lcard">
+      <div class="lf"><label>Usuario</label><input type="text" id="lu" placeholder="Ingresa tu usuario" onkeydown="if(event.key==='Enter')login()"></div>
+      <div class="lf"><label>Contraseña</label><input type="password" id="lp" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"></div>
+      <button class="btn-login-full" onclick="login()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Iniciar sesión
+      </button>
+      <div class="lerr" id="lerr">Usuario o contraseña incorrectos. Verifica tus datos.</div>
+    </div>
+  </div>
+</div>
+
+<div id="appPage" style="display:none">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l1-5h16l1 5"/>
+          <path d="M3 9a2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2"/>
+          <path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/>
+          <path d="M10 15h4v4h-4z"/>
+        </svg>
+      </div>
+      <span class="brand-name">Dashboard de tiendas</span>
+      <div class="brand-sep"></div>
+      <span class="brand-sub" id="topFile"></span>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="avatar" id="topAv"></div>
+        <span class="uname" id="topName"></span>
+        <span class="rpill" id="topRole"></span>
+      </div>
+      <button class="btn-logout" onclick="logout()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Salir
+      </button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="sidenav">
+      <div class="nav-section">Vistas</div>
+      <button class="nav-item active" id="nav-graf" onclick="setView('graf')">
+        <svg class="ico" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10H12z"/></svg>
+        <span>Gráficas</span>
+      </button>
+      <button class="nav-item" id="nav-tiendas" onclick="setView('tiendas')">
+        <svg class="ico" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M3 9a2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2"/><path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/><path d="M10 15h4v4h-4z"/></svg>
+        <span>Tiendas</span>
+      </button>
+      <button class="nav-item" id="nav-cedis" onclick="setView('cedis')">
+        <svg class="ico" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+        <span>CEDIS</span>
+      </button>
+      <div class="nav-divider"></div>
+      <div class="nav-section">Archivo</div>
+      <button class="nav-item" onclick="resetData()">
+        <svg class="ico" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>Sincronizar</span>
+      </button>
+      <button class="nav-item" id="nav-export" onclick="exportCSV()">
+        <svg class="ico" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Exportar CSV</span>
+      </button>
+    </div>
+
+    <div class="main">
+      <div id="uploadView">
+        <p class="page-title">Sincronizar datos</p>
+        <p class="page-sub">Conectando con tu archivo en OneDrive...</p>
+
+        <div id="loadingState" style="text-align:center;padding:3rem 1rem;">
+          <div style="width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin 0.9s linear infinite;margin:0 auto 20px;"></div>
+          <p style="font-size:14px;color:var(--text2);font-weight:500;">Cargando Catalogo.xlsx desde OneDrive...</p>
+          <p style="font-size:12px;color:var(--text3);margin-top:6px;">Esto puede tardar unos segundos</p>
+        </div>
+
+        <div id="errorState" style="display:none;text-align:center;padding:2rem 1rem;">
+          <div style="width:52px;height:52px;background:#FCEBEB;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#A32D2D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <p style="font-size:15px;font-weight:600;color:var(--text1);margin-bottom:6px;">No se pudo conectar a OneDrive</p>
+          <p style="font-size:13px;color:var(--text2);margin-bottom:1.5rem;" id="errDetail">Verifica que el archivo sea público o carga el archivo manualmente.</p>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+            <button class="btn-navy" onclick="loadFromOneDrive()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Reintentar
+            </button>
+            <button class="btn-ghost" onclick="showManual()">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Cargar manualmente
+            </button>
+          </div>
+        </div>
+
+        <div id="manualState" style="display:none;">
+          <div class="upload-area" id="dropZone" onclick="document.getElementById('fi').click()" ondragover="dov(event)" ondragleave="dol()" ondrop="ddr(event)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+            <p>Haz clic aquí o arrastra tu archivo Excel</p>
+            <span>Catalogo.xlsx &mdash; el archivo no sale de tu navegador</span>
+          </div>
+        </div>
+
+        <input type="file" id="fi" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
+        <div id="uerr"></div>
+      </div>
+
+      <div id="grafView" style="display:none">
+        <p class="page-title">Resumen general</p>
+        <p class="page-sub">Distribución y desglose de proveedores de internet</p>
+        <div class="stats">
+          <div class="stat stat-blue">
+            <div class="stat-icon si-blue"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M3 9a2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2"/><path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/><path d="M10 15h4v4h-4z"/></svg></div>
+            <div class="stat-val" id="sT">0</div><div class="stat-lbl">Total tiendas</div>
+          </div>
+          <div class="stat stat-orange">
+            <div class="stat-icon si-orange"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></div>
+            <div class="stat-val" id="sP">0</div><div class="stat-lbl">Proveedores</div>
+          </div>
+          <div class="stat stat-green">
+            <div class="stat-icon si-green"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
+            <div class="stat-val" id="sC">0</div><div class="stat-lbl">Compañías</div>
+          </div>
+          <div class="stat stat-purple">
+            <div class="stat-icon si-purple"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="2"/><rect x="14" y="2" width="8" height="8" rx="2"/><rect x="2" y="14" width="8" height="8" rx="2"/><rect x="14" y="14" width="8" height="8" rx="2"/></svg></div>
+            <div class="stat-val" id="sS">0</div><div class="stat-lbl">Con secundario</div>
+          </div>
+        </div>
+        <div class="charts-row">
+          <div class="panel"><div class="panel-title">Tiendas por proveedor principal</div><div class="legend" id="lBar"></div><div style="position:relative;width:100%;height:240px;"><canvas id="cBar"></canvas></div></div>
+
+          <div class="panel"><div class="panel-title">Proveedores secundarios</div><div class="legend" id="lSec"></div><div id="secWrap" style="position:relative;width:100%;height:220px;"><canvas id="cSec"></canvas></div><div id="noSec" style="display:none;text-align:center;padding-top:2.5rem;font-size:13px;color:#8896A8;">Sin datos de proveedor secundario</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Desglose por compañía y proveedor</div>
+          <div style="overflow-x:auto;"><table class="breakdown-tbl"><thead><tr id="bHead"></tr></thead><tbody id="bBody"></tbody></table></div>
+        </div>
+      </div>
+
+      <div id="tiendasView" style="display:none">
+        <div class="section-header">
+          <div><p class="page-title">Administrar tiendas</p><p class="page-sub">Gestiona el catálogo completo de tiendas</p></div>
+          <button class="btn-orange" id="addBtn" onclick="openAdd()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nueva tienda
+          </button>
+        </div>
+        <div class="filters-bar">
+          <div class="sbox">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8896A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="sq" placeholder="Buscar tienda, ECO, CECO..." oninput="renderT()">
+          </div>
+          <select class="psel" id="fReg" onchange="this.classList.toggle('on',this.value!=='');renderT()"><option value="">Región</option></select>
+          <select class="psel" id="fProv" onchange="this.classList.toggle('on',this.value!=='');renderT()"><option value="">Proveedor</option></select>
+          <select class="psel" id="fSec" onchange="this.classList.toggle('on',this.value!=='');renderT()"><option value="">Secundario</option><option value="si">Con secundario</option><option value="no">Sin secundario</option></select>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr>
+              <th style="width:65px">ECO</th><th style="width:80px">CECO</th><th>Nombre tienda</th>
+              <th style="width:75px">Región</th><th style="width:90px">Compañía</th>
+              <th style="width:110px">Prov. ppal.</th><th style="width:90px">Cuenta 1</th>
+              <th style="width:110px">Prov. sec.</th><th style="width:90px">Cuenta 2</th>
+              <th id="thAct" style="width:160px">Acciones</th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div id="emptyT" class="empty" style="display:none">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 10px;opacity:0.3;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Sin resultados para ese filtro
+        </div>
+        <div class="tcount" id="tcount"></div>
+      </div>
+      <div id="cedisView" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap;gap:10px;">
+          <div><p class="page-title">CEDIS</p><p class="page-sub">Centros de distribución, oficinas y cross-docks</p></div>
+          <button class="btn-orange" id="addCedisBtn" onclick="openAddCedis()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nuevo registro
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <div class="sbox" style="flex:1;min-width:180px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8896A8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="sqc" placeholder="Buscar sitio, ECO..." oninput="renderC()">
+          </div>
+          <select class="psel" id="fTipo" onchange="this.classList.toggle('on',this.value!=='');renderC()">
+            <option value="">Todos los tipos</option>
+            <option value="CEDIS">CEDIS</option>
+            <option value="OFICINA">OFICINA</option>
+            <option value="XDOCK">XDOCK</option>
+          </select>
+          <select class="psel" id="fCiaC" onchange="this.classList.toggle('on',this.value!=='');renderC()"><option value="">Compañía</option></select>
+          <select class="psel" id="fProvC" onchange="this.classList.toggle('on',this.value!=='');renderC()"><option value="">Proveedor</option></select>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr>
+              <th style="width:65px">ECO</th>
+              <th>Sitio</th>
+              <th style="width:100px">Tipo</th>
+              <th style="width:90px">Compañía</th>
+              <th style="width:110px">Proveedor 1</th>
+              <th style="width:90px">Cuenta 1</th>
+              <th style="width:110px">Proveedor 2</th>
+              <th style="width:90px">Cuenta 2</th>
+              <th style="width:110px">Proveedor 3</th>
+              <th style="width:90px">Cuenta 3</th>
+              <th id="thActC" style="width:160px">Acciones</th>
+            </tr></thead>
+            <tbody id="tbodyC"></tbody>
+          </table>
+        </div>
+        <div id="emptyC" class="empty" style="display:none">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;margin:0 auto 10px;opacity:0.3;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Sin resultados
+        </div>
+        <div class="tcount" id="tcountC"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="formMod">
+  <div class="mbox">
+    <div class="mhead">
+      <h2 id="formTitle">Nueva tienda</h2>
+      <button class="btn-ghost" onclick="closeForm()" style="padding:5px 10px;">✕</button>
+    </div>
+    <div class="fgrid">
+      <div class="ff"><label>ECO</label><input type="text" id="fE" placeholder="3501"></div>
+      <div class="ff"><label>CECO</label><input type="text" id="fC" placeholder="653501"></div>
+      <div class="ff full"><label>Nombre tienda <span style="color:var(--red-btn)">*</span></label><input type="text" id="fN" placeholder="Nombre de la tienda"></div>
+      <div class="ff"><label>Región</label><input type="text" id="fR" placeholder="NEZA, VALLE..."></div>
+      <div class="ff"><label>Compañía</label><input type="text" id="fCo" placeholder="ORIENTE, NORTE..."></div>
+      <div class="ff"><label>Proveedor principal</label><input type="text" id="fPp" placeholder="TELMEX, IZZI..."></div>
+      <div class="ff"><label>Cuenta 1</label><input type="text" id="fC1" placeholder="534-12345"></div>
+      <div class="ff"><label>Proveedor secundario</label><input type="text" id="fPs" placeholder="METROCARRIER..."></div>
+      <div class="ff"><label>Cuenta 2</label><input type="text" id="fC2" placeholder="300-18265"></div>
+    </div>
+    <div id="formErr" style="font-size:12px;color:var(--red-txt);margin-top:10px;display:none;">El nombre de la tienda es obligatorio.</div>
+    <div class="mfoot">
+      <button class="btn-ghost" onclick="closeForm()">Cancelar</button>
+      <button class="btn-navy" onclick="saveForm()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="delMod">
+  <div class="cbox">
+    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    <h2>Eliminar tienda</h2>
+    <p id="delMsg">¿Confirmas que deseas eliminar esta tienda?</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn-ghost" onclick="closeDel()">Cancelar</button>
+      <button class="btn-danger-sm" onclick="confirmDel()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="formCedisMod">
+  <div class="mbox">
+    <div class="mhead"><h2 id="formCedisTitle">Nuevo CEDIS</h2><button class="btn-ghost" onclick="closeFormCedis()" style="padding:5px 10px;">&#x2715;</button></div>
+    <div class="fgrid">
+      <div class="ff"><label>ECO</label><input type="text" id="fcE" placeholder="3501"></div>
+      <div class="ff"><label>Tipo</label>
+        <select id="fcT" style="font-size:13px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--text1);outline:none;">
+          <option value="CEDIS">CEDIS</option>
+          <option value="OFICINA">OFICINA</option>
+          <option value="XDOCK">XDOCK</option>
+        </select>
+      </div>
+      <div class="ff full"><label>Sitio <span style="color:var(--red-btn)">*</span></label><input type="text" id="fcS" placeholder="Nombre del sitio"></div>
+      <div class="ff"><label>Compañía</label><input type="text" id="fcCo" placeholder="ORIENTE, NORTE..."></div>
+      <div class="ff"><label>Proveedor 1</label><input type="text" id="fcP1" placeholder="TELMEX, IZZI..."></div>
+      <div class="ff"><label>Cuenta 1</label><input type="text" id="fcC1" placeholder="534-12345"></div>
+      <div class="ff"><label>Proveedor 2</label><input type="text" id="fcP2" placeholder="METROCARRIER..."></div>
+      <div class="ff"><label>Cuenta 2</label><input type="text" id="fcC2" placeholder="300-18265"></div>
+      <div class="ff"><label>Proveedor 3</label><input type="text" id="fcP3" placeholder="AXTEL..."></div>
+      <div class="ff"><label>Cuenta 3</label><input type="text" id="fcC3" placeholder="AX-11111"></div>
+    </div>
+    <div id="formCedisErr" style="font-size:12px;color:var(--red-txt);margin-top:10px;display:none;">El nombre del sitio es obligatorio.</div>
+    <div class="mfoot">
+      <button class="btn-ghost" onclick="closeFormCedis()">Cancelar</button>
+      <button class="btn-navy" onclick="saveFormCedis()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="delCedisMod">
+  <div class="cbox">
+    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+    <h2>Eliminar registro</h2>
+    <p id="delCedisMsg">¿Confirmas que deseas eliminar este registro?</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn-ghost" onclick="closeDelCedis()">Cancelar</button>
+      <button class="btn-danger-sm" onclick="confirmDelCedis()">S&#237;, eliminar</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// URL de descarga directa del archivo en OneDrive
+const ONEDRIVE_URL = "https://api.onedrive.com/v1.0/shares/u!aHR0cHM6Ly8xZHJ2Lm1zL3gvYy82MkQ5MTY1RDM4RDk1NjA0L0lRQUhmLWJzUWdyNFFxVW9wNlRQWl8tckFUVk1hdUlCZlgweExMamVBRExyY0JZP2U9Tklyb1p2/root/content";
+
+function showManual(){
+  document.getElementById("loadingState").style.display="none";
+  document.getElementById("errorState").style.display="none";
+  document.getElementById("manualState").style.display="block";
+}
+
+async function loadFromOneDrive(){
+  document.getElementById("loadingState").style.display="block";
+  document.getElementById("errorState").style.display="none";
+  document.getElementById("manualState").style.display="none";
+  try{
+    const resp = await fetch(ONEDRIVE_URL);
+    if(!resp.ok) throw new Error("Error "+resp.status+": "+resp.statusText);
+    const buf = await resp.arrayBuffer();
+    const wb = XLSX.read(buf,{type:"array"});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json(ws,{defval:""});
+    if(!raw.length) throw new Error("La primera hoja está vacía.");
+    parseRows(raw,"Catalogo.xlsx (OneDrive)",wb);
+  }catch(err){
+    document.getElementById("loadingState").style.display="none";
+    document.getElementById("errorState").style.display="block";
+    document.getElementById("errDetail").textContent=err.message||"No se pudo descargar el archivo.";
+  }
+}
+
+// Contraseñas almacenadas como hash SHA-256 (no reversible)
+const USERS={
+  "admin":{hash:"8282ab45011ed0ff49258c88c9c8948bc0f5d67f07729aedab7c42fd8af0f716",role:"admin",label:"Administrador"},
+  "visor":{hash:"7730eb0a2003411e256906acf0fd5f38dc9bdd76a903830a6f6d4551f2049f30",role:"visor",label:"Visor"},
+};
+async function hashStr(str){
+  const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+const PERMS={admin:{export:true,add:true,edit:true,del:true},visor:{export:false,add:false,edit:false,del:false}};
+let cu=null,rows=[],bChart=null,dChart=null,sChart=null,editIdx=-1,delIdx=-1;
+const PAL=['#0B1F3A','#E8661A','#2E7D32','#5C35B0','#B85C00','#1565C0','#7B1FA2','#37474F'];
+const DEMO=[
+  {eco:"3501",ceco:"653501",tienda:"Chimalhuacán",region:"NEZA",compania:"ORIENTE",pp:"TELMEX",c1:"534-12345",ps:"",c2:""},
+  {eco:"3503",ceco:"653503",tienda:"Mariquita Linda",region:"NEZA",compania:"ORIENTE",pp:"TELMEX",c1:"534-22222",ps:"",c2:""},
+  {eco:"3505",ceco:"653505",tienda:"Las Torres",region:"NEZA",compania:"ORIENTE",pp:"IZZI",c1:"877-33333",ps:"",c2:""},
+  {eco:"3777",ceco:"653777",tienda:"Soto y Gama",region:"VALLE",compania:"ORIENTE",pp:"TELMEX",c1:"534-55555",ps:"METROCARRIER",c2:"537-29796"},
+  {eco:"3700",ceco:"653700",tienda:"Coatlinchán",region:"NEZA",compania:"NORTE",pp:"TELMEX",c1:"534-77777",ps:"",c2:""},
+  {eco:"3712",ceco:"653712",tienda:"Poniente 15",region:"VALLE",compania:"NORTE",pp:"IZZI",c1:"877-88888",ps:"",c2:""},
+  {eco:"3711",ceco:"653711",tienda:"Ruiz Cortinez",region:"VALLE",compania:"NORTE",pp:"TELMEX",c1:"534-99999",ps:"METROCARRIER",c2:"300-18265"},
+  {eco:"3699",ceco:"653699",tienda:"San Agustín",region:"NEZA",compania:"SUR",pp:"AXTEL",c1:"AX-22222",ps:"",c2:""},
+  {eco:"3704",ceco:"653704",tienda:"San Vicente",region:"NEZA",compania:"OCCIDENTE",pp:"AXTEL",c1:"AX-33333",ps:"METROCARRIER",c2:"300-99999"},
+  {eco:"3709",ceco:"653709",tienda:"San Sebastián",region:"VALLE",compania:"OCCIDENTE",pp:"TELMEX",c1:"534-66666",ps:"",c2:""},
+];
+function can(p){return cu&&PERMS[cu.role][p];}
+async function login(){
+  const u=document.getElementById("lu").value.trim().toLowerCase();
+  const p=document.getElementById("lp").value;
+  if(!USERS[u]){document.getElementById("lerr").style.display="block";document.getElementById("lp").value="";return;}
+  const h=await hashStr(p);
+  if(h===USERS[u].hash){
+    cu={name:u,...USERS[u]};
+    document.getElementById("lerr").style.display="none";
+    document.getElementById("loginPage").style.display="none";
+    document.getElementById("appPage").style.display="block";
+    const isAdmin=cu.role==="admin";
+    const av=document.getElementById("topAv");
+    av.textContent=cu.label[0];av.className="avatar "+(isAdmin?"av-admin":"av-visor");
+    document.getElementById("topName").textContent=cu.label;
+    const rp=document.getElementById("topRole");
+    rp.textContent=isAdmin?"Admin":"Visor";
+    rp.className="rpill "+(isAdmin?"rp-admin":"rp-visor");
+    document.getElementById("nav-export").style.display=can("export")?"flex":"none";
+    // Auto-load OneDrive file after login
+    setTimeout(loadFromOneDrive, 300);
+  }else{document.getElementById("lerr").style.display="block";document.getElementById("lp").value="";}
+}
+function logout(){
+  cu=null;rows=[];
+  if(bChart){bChart.destroy();bChart=null;} if(sChart){sChart.destroy();sChart=null;}
+  if(dChart){dChart.destroy();dChart=null;}
+  document.getElementById("appPage").style.display="none";
+  document.getElementById("loginPage").style.display="flex";
+  document.getElementById("lu").value="";document.getElementById("lp").value="";
+  document.getElementById("uploadView").style.display="block";
+  document.getElementById("grafView").style.display="none";
+  document.getElementById("tiendasView").style.display="none";
+  document.getElementById("topFile").textContent="";
+}
+function setView(v){
+  ["graf","tiendas","cedis"].forEach(x=>{
+    const el=document.getElementById("nav-"+x);
+    if(el)el.classList.toggle("active",v===x);
+    const vEl=document.getElementById(x==="graf"?"grafView":x==="tiendas"?"tiendasView":"cedisView");
+    if(vEl)vEl.style.display=v===x?"block":"none";
+  });
+  document.getElementById("uploadView").style.display="none";
+  if(v==="tiendas")renderT();
+  if(v==="cedis")renderC();
+}
+function dov(e){e.preventDefault();document.getElementById("dropZone").style.borderColor="#163660";}
+function dol(){document.getElementById("dropZone").style.borderColor="";}
+function ddr(e){e.preventDefault();dol();const f=e.dataTransfer.files[0];if(f)handleFile(f);}
+function handleFile(file){
+  if(!file)return;
+  const r=new FileReader();
+  r.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:"array"});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const raw=XLSX.utils.sheet_to_json(ws,{defval:""});
+      if(!raw.length)throw new Error("La hoja está vacía.");
+      parseRows(raw,file.name,wb);
+    }catch(err){document.getElementById("uerr").innerHTML='<p style="color:#A32D2D;font-size:13px;margin-top:10px;text-align:center;">'+err.message+'</p>';}
+  };
+  r.readAsArrayBuffer(file);
+}
+function nk(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[\s_\-]/g,"");}
+function fc(obj,terms){const keys=Object.keys(obj);for(const t of terms){const f=keys.find(k=>nk(k).includes(nk(t)));if(f)return f;}return null;}
+function gv(obj,k){return k?String(obj[k]||"").trim():"";}
+let cedisRows=[], cedisEditIdx=-1, cedisDelIdx=-1;
+
+function parseRows(raw,fname,wb){
+  const s=raw[0];
+  rows=raw.map(r=>({
+    eco:gv(r,fc(s,["eco"])),ceco:gv(r,fc(s,["ceco"])),
+    tienda:gv(r,fc(s,["tienda","nombret","neto","nombre"]))||"—",
+    region:gv(r,fc(s,["region","nombreregion"]))||"—",
+    compania:gv(r,fc(s,["compania","company","cia"]))||"—",
+    pp:gv(r,fc(s,["proveedorprincipal","principal"])),
+    c1:gv(r,fc(s,["cuenta1","cta1"])),
+    ps:gv(r,fc(s,["proveedorsecundario","secundario"])),
+    c2:gv(r,fc(s,["cuenta2","cta2"])),
+  }));
+  // Read CEDIS sheet
+  cedisRows=[];
+  if(wb){
+    const cedisSheet=wb.SheetNames.find(n=>n.toLowerCase().includes("cedis"));
+    if(cedisSheet){
+      const rawC=XLSX.utils.sheet_to_json(wb.Sheets[cedisSheet],{defval:""});
+      if(rawC.length){
+        const sc=rawC[0];
+        cedisRows=rawC.map(r=>({
+          eco:gv(r,fc(sc,["eco"])),
+          sitio:gv(r,fc(sc,["sitio","nombre","site"]))||"—",
+          cia:gv(r,fc(sc,["compania","compañia","company","cia"]))||"—",
+          tipo:gv(r,fc(sc,["tipo","type"]))||"CEDIS",
+          p1:gv(r,fc(sc,["proveedor1","proveedor 1","principal","pp"])),
+          c1:gv(r,fc(sc,["cuenta1","cuenta 1","cta1"])),
+          p2:gv(r,fc(sc,["proveedor2","proveedor 2","secundario","ps"])),
+          c2:gv(r,fc(sc,["cuenta2","cuenta 2","cta2"])),
+          p3:gv(r,fc(sc,["proveedor3","proveedor 3"])),
+          c3:gv(r,fc(sc,["cuenta3","cuenta 3","cta3"])),
+        }));
+      }
+    }
+  }
+  initDash(fname);
+}
+function loadDemo(){rows=DEMO.map(r=>({...r}));cedisRows=[];initDash("demo — datos de ejemplo");}
+function initDash(fname){
+  document.getElementById("topFile").textContent=fname;
+  document.getElementById("uploadView").style.display="none";
+  document.getElementById("addBtn").style.display=can("add")?"inline-flex":"none";
+  document.getElementById("thAct").style.display=can("edit")?"":"none";
+  document.getElementById("addCedisBtn").style.display=can("add")?"inline-flex":"none";
+  document.getElementById("thActC").style.display=can("edit")?"":"none";
+  populateCedisFilters();
+  updateStats();buildCharts();buildBreakdown();populateFilters();setView("graf");
+}
+function resetData(){
+  if(bChart){bChart.destroy();bChart=null;} if(sChart){sChart.destroy();sChart=null;}
+  if(dChart){dChart.destroy();dChart=null;}
+  rows=[];
+  document.getElementById("grafView").style.display="none";
+  document.getElementById("tiendasView").style.display="none";
+  document.getElementById("uploadView").style.display="block";
+  document.getElementById("cedisView").style.display="none";
+  document.getElementById("nav-graf").classList.remove("active");
+  document.getElementById("nav-tiendas").classList.remove("active");
+  const nc=document.getElementById("nav-cedis");if(nc)nc.classList.remove("active");
+  document.getElementById("fi").value="";
+  document.getElementById("topFile").textContent="";
+}
+function updateStats(){
+  document.getElementById("sT").textContent=rows.length;
+  document.getElementById("sP").textContent=new Set(rows.map(r=>r.pp).filter(Boolean)).size;
+  document.getElementById("sC").textContent=new Set(rows.map(r=>r.compania).filter(x=>x&&x!=="—")).size;
+  document.getElementById("sS").textContent=rows.filter(r=>r.ps).length;
+}
+function buildCharts(){
+  const pc={};rows.forEach(r=>{if(r.pp)pc[r.pp]=(pc[r.pp]||0)+1;});
+  const labels=Object.keys(pc).sort((a,b)=>pc[b]-pc[a]);
+  const data=labels.map(l=>pc[l]);
+  const colors=labels.map((_,i)=>PAL[i%PAL.length]);
+  const total=data.reduce((a,b)=>a+b,0)||1;
+
+  // Legend: compact pills
+  document.getElementById("lBar").innerHTML=labels.map((l,i)=>
+    '<span class="legend-item"><span class="ldot" style="background:'+colors[i]+'"></span><span style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle" title="'+l+'">'+l+'</span> <strong>'+data[i]+'</strong></span>'
+  ).join("");
+  document.getElementById("lDona").innerHTML=labels.map((l,i)=>
+    '<span class="legend-item"><span class="ldot" style="background:'+colors[i]+'"></span><span style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle" title="'+l+'">'+l+'</span> <strong>'+Math.round(data[i]/total*100)+'%</strong></span>'
+  ).join("");
+
+  if(bChart)bChart.destroy();
+  bChart=new Chart(document.getElementById("cBar"),{
+    type:"bar",
+    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,borderRadius:5}]},
+    options:{
+      indexAxis:"y",
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>" "+ctx.parsed.x+" tiendas ("+(Math.round(ctx.parsed.x/total*100))+"%)"}}
+      },
+      scales:{
+        x:{grid:{color:"rgba(0,0,0,0.04)"},ticks:{font:{size:11},color:"#8896A8"},beginAtZero:true},
+        y:{grid:{display:false},ticks:{font:{size:11},color:"#4A5568",crossAlign:"far"}}
+      }
+    }
+  });
+
+
+  buildSecChart();
+}
+function buildSecChart(){
+  const sc={};
+  rows.forEach(r=>{if(r.ps)sc[r.ps]=(sc[r.ps]||0)+1;});
+  const hasSec=Object.keys(sc).length>0;
+  document.getElementById("secWrap").style.display=hasSec?"block":"none";
+  document.getElementById("noSec").style.display=hasSec?"none":"block";
+  if(!hasSec){if(sChart){sChart.destroy();sChart=null;}document.getElementById("lSec").innerHTML="";return;}
+
+  const labels=Object.keys(sc).sort((a,b)=>sc[b]-sc[a]);
+  const data=labels.map(l=>sc[l]);
+  const colors=["#E8661A","#0B1F3A","#2E7D32","#5C35B0","#B85C00","#1565C0","#7B1FA2","#37474F"];
+  const totalSec=data.reduce((a,b)=>a+b,0)||1;
+
+  // Info pill: total con secundario
+  const totalConSec=rows.filter(r=>r.ps).length;
+  const pct=Math.round(totalConSec/rows.length*100);
+  document.getElementById("lSec").innerHTML=
+    '<div style="font-size:11px;color:#8896A8;margin-bottom:6px;">'+totalConSec+' de '+rows.length+' tiendas tienen enlace secundario <strong style="color:var(--orange)">'+pct+'%</strong></div>'+
+    labels.map((l,i)=>
+      '<span class="legend-item"><span class="ldot" style="background:'+colors[i%colors.length]+'"></span><span style="max-width:85px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle" title="'+l+'">'+l+'</span> <strong>'+data[i]+'</strong></span>'
+    ).join("");
+
+  if(sChart)sChart.destroy();
+  sChart=new Chart(document.getElementById("cSec"),{
+    type:"bar",
+    data:{labels,datasets:[{data,backgroundColor:colors.slice(0,labels.length),borderWidth:0,borderRadius:5}]},
+    options:{
+      indexAxis:"y",
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>" "+ctx.parsed.x+" tiendas ("+Math.round(ctx.parsed.x/totalSec*100)+"% del total c/secundario)"}}
+      },
+      scales:{
+        x:{grid:{color:"rgba(0,0,0,0.04)"},ticks:{font:{size:11},color:"#8896A8"},beginAtZero:true},
+        y:{grid:{display:false},ticks:{font:{size:11},color:"#4A5568",crossAlign:"far"}}
+      }
+    }
+  });
+}
+function buildBreakdown(){
+  const cias=[...new Set(rows.map(r=>r.compania).filter(x=>x&&x!=="—"))].sort();
+  const provs=[...new Set(rows.map(r=>r.pp).filter(Boolean))].sort((a,b)=>rows.filter(r=>r.pp===b).length-rows.filter(r=>r.pp===a).length);
+  const colors={};provs.forEach((p,i)=>colors[p]=PAL[i%PAL.length]);
+  document.getElementById("bHead").innerHTML='<th>Compañía</th>'+provs.map(p=>'<th style="text-align:center">'+p+'</th>').join('')+'<th style="text-align:center">Total</th>';
+  const tots={};provs.forEach(p=>tots[p]=0);let grand=0;
+  document.getElementById("bBody").innerHTML=cias.map(cia=>{
+    const cr=rows.filter(r=>r.compania===cia);const rt=cr.length;grand+=rt;
+    const cells=provs.map(p=>{
+      const cnt=cr.filter(r=>r.pp===p).length;tots[p]=(tots[p]||0)+cnt;
+      const bw=rt>0?Math.round(cnt/rt*100*0.55):0;
+      return '<td style="text-align:center">'+(cnt>0?'<span style="font-weight:600">'+cnt+'</span> <span class="bar-i" style="width:'+bw+'px;background:'+colors[p]+';opacity:0.4;"></span>':'<span style="color:#8896A8">—</span>')+'</td>';
+    }).join("");
+    return '<tr><td style="font-weight:500">'+cia+'</td>'+cells+'<td style="text-align:center;font-weight:500">'+rt+'</td></tr>';
+  }).join('')+'<tr style="background:#F2F5FA"><td style="font-size:11px;font-weight:600;color:#8896A8;text-transform:uppercase;letter-spacing:0.04em">Total</td>'+provs.map(p=>'<td style="text-align:center;font-weight:600">'+tots[p]+'</td>').join('')+'<td style="text-align:center;font-weight:600">'+grand+'</td></tr>';
+}
+function populateFilters(){
+  const fR=document.getElementById("fReg");fR.innerHTML='<option value="">Región</option>';
+  [...new Set(rows.map(r=>r.region).filter(x=>x&&x!=="—"))].sort().forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;fR.appendChild(o);});
+  const fP=document.getElementById("fProv");fP.innerHTML='<option value="">Proveedor</option>';
+  const ps=new Set();rows.forEach(r=>{if(r.pp)ps.add(r.pp);if(r.ps)ps.add(r.ps);});
+  [...ps].sort().forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;fP.appendChild(o);});
+}
+function renderT(){
+  const q=document.getElementById("sq").value.toLowerCase();
+  const reg=document.getElementById("fReg").value;
+  const prov=document.getElementById("fProv").value;
+  const sec=document.getElementById("fSec").value;
+  let f=rows.filter(r=>{
+    if(q&&!(r.eco+' '+r.ceco+' '+r.tienda+' '+r.region+' '+r.compania+' '+r.pp+' '+r.ps).toLowerCase().includes(q))return false;
+    if(reg&&r.region!==reg)return false;
+    if(prov&&r.pp!==prov&&r.ps!==prov)return false;
+    if(sec==="si"&&!r.ps)return false;
+    if(sec==="no"&&r.ps)return false;
+    return true;
+  });
+  const isAdmin=can("edit");
+  const editSvg='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+  const delSvg='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+  document.getElementById("tbody").innerHTML=f.map(r=>{
+    const i=rows.indexOf(r);
+    return '<tr><td class="mono">'+(r.eco||"—")+'</td><td class="mono">'+(r.ceco||"—")+'</td><td style="font-weight:500;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r.tienda+'">'+r.tienda+'</td><td style="color:#4A5568">'+r.region+'</td><td style="font-size:12px;color:#8896A8">'+r.compania+'</td><td>'+(r.pp?'<span class="badge bp">'+r.pp+'</span>':'<span style="color:#8896A8">—</span>')+'</td><td class="mono">'+(r.c1||"—")+'</td><td>'+(r.ps?'<span class="badge bs">'+r.ps+'</span>':'<span style="color:#8896A8;font-size:11px;">—</span>')+'</td><td class="mono">'+(r.c2||"—")+'</td>'+(isAdmin?'<td><div class="act-cell"><button class="abt abt-e" onclick="openEdit('+i+')">'+editSvg+' Editar</button><button class="abt abt-d" onclick="openDel('+i+')">'+delSvg+' Eliminar</button></div></td>':'<td style="display:none"></td>')+'</tr>';
+  }).join("");
+  document.getElementById("emptyT").style.display=f.length?"none":"block";
+  document.getElementById("tcount").textContent=f.length?f.length+' tienda'+(f.length!==1?'s':'')+' mostrada'+(f.length!==1?'s':''):'';
+}
+function clrForm(){["fE","fC","fN","fR","fCo","fPp","fC1","fPs","fC2"].forEach(id=>document.getElementById(id).value="");document.getElementById("formErr").style.display="none";}
+function openAdd(){editIdx=-1;clrForm();document.getElementById("formTitle").textContent="Nueva tienda";document.getElementById("formMod").classList.add("open");}
+function openEdit(i){
+  editIdx=i;const r=rows[i];
+  document.getElementById("fE").value=r.eco;document.getElementById("fC").value=r.ceco;
+  document.getElementById("fN").value=r.tienda;document.getElementById("fR").value=r.region;
+  document.getElementById("fCo").value=r.compania;document.getElementById("fPp").value=r.pp;
+  document.getElementById("fC1").value=r.c1;document.getElementById("fPs").value=r.ps;document.getElementById("fC2").value=r.c2;
+  document.getElementById("formErr").style.display="none";
+  document.getElementById("formTitle").textContent="Editar tienda";
+  document.getElementById("formMod").classList.add("open");
+}
+function saveForm(){
+  const n=document.getElementById("fN").value.trim();
+  if(!n){document.getElementById("formErr").style.display="block";return;}
+  const row={eco:document.getElementById("fE").value.trim(),ceco:document.getElementById("fC").value.trim(),tienda:n,region:document.getElementById("fR").value.trim()||"—",compania:document.getElementById("fCo").value.trim()||"—",pp:document.getElementById("fPp").value.trim(),c1:document.getElementById("fC1").value.trim(),ps:document.getElementById("fPs").value.trim(),c2:document.getElementById("fC2").value.trim()};
+  if(editIdx>=0){rows[editIdx]=row;toast("Tienda actualizada");}else{rows.push(row);toast("Tienda agregada");}
+  closeForm();updateStats();buildCharts();buildBreakdown();populateFilters();renderT();
+}
+function closeForm(){document.getElementById("formMod").classList.remove("open");}
+function openDel(i){delIdx=i;document.getElementById("delMsg").textContent='¿Confirmas que deseas eliminar "'+rows[i].tienda+'"? Esta acción no se puede deshacer.';document.getElementById("delMod").classList.add("open");}
+function confirmDel(){rows.splice(delIdx,1);closeDel();toast("Tienda eliminada");updateStats();buildCharts();buildBreakdown();populateFilters();renderT();}
+function closeDel(){document.getElementById("delMod").classList.remove("open");delIdx=-1;}
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2800);}
+
+function populateCedisFilters(){
+  const fp=document.getElementById("fProvC");
+  fp.innerHTML='<option value="">Proveedor</option>';
+  const ps=new Set();cedisRows.forEach(r=>{if(r.p1)ps.add(r.p1);if(r.p2)ps.add(r.p2);if(r.p3)ps.add(r.p3);});
+  [...ps].sort().forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;fp.appendChild(o);});
+  const fc2=document.getElementById("fCiaC");
+  fc2.innerHTML='<option value="">Compañía</option>';
+  const cs=new Set();cedisRows.forEach(r=>{if(r.cia&&r.cia!=="—")cs.add(r.cia);});
+  [...cs].sort().forEach(x=>{const o=document.createElement("option");o.value=x;o.textContent=x;fc2.appendChild(o);});
+}
+
+function renderC(){
+  const q=document.getElementById("sqc").value.toLowerCase();
+  const tipo=document.getElementById("fTipo").value;
+  const cia=document.getElementById("fCiaC").value;
+  const prov=document.getElementById("fProvC").value;
+  let f=cedisRows.filter(r=>{
+    if(q&&!(r.eco+" "+r.sitio+" "+r.tipo+" "+r.cia+" "+r.p1+" "+r.p2).toLowerCase().includes(q))return false;
+    if(tipo&&r.tipo!==tipo)return false;
+    if(cia&&r.cia!==cia)return false;
+    if(prov&&r.p1!==prov&&r.p2!==prov&&r.p3!==prov)return false;
+    return true;
+  });
+  const isAdmin=can("edit");
+  const TIPO_COLORS={"CEDIS":"background:#E8EEF8;color:#163660","OFICINA":"background:#FEF0E7;color:#8A3500","XDOCK":"background:#EDE7F6;color:#5C35B0"};
+  const editSvg='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+  const delSvg='<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+  document.getElementById("tbodyC").innerHTML=f.map(r=>{
+    const i=cedisRows.indexOf(r);
+    const tStyle=TIPO_COLORS[r.tipo]||"background:#F2F5FA;color:#4A5568";
+    return '<tr><td class="mono">'+(r.eco||"—")+'</td><td style="font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+r.sitio+'">'+r.sitio+'</td><td><span class="badge" style="'+tStyle+'">'+r.tipo+'</span></td><td>'+(r.p1?'<span class="badge bp">'+r.p1+'</span>':'<span style="color:#8896A8">—</span>')+'</td><td class="mono">'+(r.c1||"—")+'</td><td>'+(r.p2?'<span class="badge bs">'+r.p2+'</span>':'<span style="color:#8896A8;font-size:11px;">—</span>')+'</td><td class="mono">'+(r.c2||"—")+'</td><td>'+(r.p3?'<span class="badge" style="background:#E8F5E9;color:#2E7D32">'+r.p3+'</span>':'<span style="color:#8896A8;font-size:11px;">—</span>')+'</td><td class="mono">'+(r.c3||"—")+'</td>'+(isAdmin?'<td><div class="act-cell"><button class="abt abt-e" onclick="openEditCedis('+i+')">'+editSvg+' Editar</button><button class="abt abt-d" onclick="openDelCedis('+i+')">'+delSvg+' Eliminar</button></div></td>':'<td style="display:none"></td>')+'</tr>';
+  }).join("");
+  document.getElementById("emptyC").style.display=f.length?"none":"block";
+  document.getElementById("tcountC").textContent=f.length?f.length+' registro'+(f.length!==1?'s':'')+' mostrado'+(f.length!==1?'s':''):"";
+}
+
+function clrFormCedis(){["fcE","fcS","fcCo","fcP1","fcC1","fcP2","fcC2","fcP3","fcC3"].forEach(id=>document.getElementById(id).value="");document.getElementById("fcT").value="CEDIS";document.getElementById("formCedisErr").style.display="none";}
+function openAddCedis(){cedisEditIdx=-1;clrFormCedis();document.getElementById("formCedisTitle").textContent="Nuevo registro";document.getElementById("formCedisMod").classList.add("open");}
+function openEditCedis(i){
+  cedisEditIdx=i;const r=cedisRows[i];
+  document.getElementById("fcE").value=r.eco;document.getElementById("fcS").value=r.sitio;document.getElementById("fcCo").value=r.cia||"—";
+  document.getElementById("fcT").value=r.tipo;document.getElementById("fcP1").value=r.p1;
+  document.getElementById("fcC1").value=r.c1;document.getElementById("fcP2").value=r.p2;document.getElementById("fcC2").value=r.c2;document.getElementById("fcP3").value=r.p3||"" ;document.getElementById("fcC3").value=r.c3||"";
+  document.getElementById("formCedisErr").style.display="none";
+  document.getElementById("formCedisTitle").textContent="Editar registro";
+  document.getElementById("formCedisMod").classList.add("open");
+}
+function saveFormCedis(){
+  const s=document.getElementById("fcS").value.trim();
+  if(!s){document.getElementById("formCedisErr").style.display="block";return;}
+  const row={eco:document.getElementById("fcE").value.trim(),sitio:s,tipo:document.getElementById("fcT").value,cia:document.getElementById("fcCo").value.trim()||"—",p1:document.getElementById("fcP1").value.trim(),c1:document.getElementById("fcC1").value.trim(),p2:document.getElementById("fcP2").value.trim(),c2:document.getElementById("fcC2").value.trim(),p3:document.getElementById("fcP3").value.trim(),c3:document.getElementById("fcC3").value.trim()};
+  if(cedisEditIdx>=0){cedisRows[cedisEditIdx]=row;toast("Registro actualizado");}else{cedisRows.push(row);toast("Registro agregado");}
+  closeFormCedis();populateCedisFilters();renderC();
+}
+function closeFormCedis(){document.getElementById("formCedisMod").classList.remove("open");}
+function openDelCedis(i){cedisDelIdx=i;document.getElementById("delCedisMsg").textContent='¿Confirmas que deseas eliminar "'+cedisRows[i].sitio+'"? Esta acción no se puede deshacer.';document.getElementById("delCedisMod").classList.add("open");}
+function confirmDelCedis(){cedisRows.splice(cedisDelIdx,1);closeDelCedis();toast("Registro eliminado");populateCedisFilters();renderC();}
+function closeDelCedis(){document.getElementById("delCedisMod").classList.remove("open");cedisDelIdx=-1;}
+function exportCSV(){
+  if(!can("export"))return;
+  const h=["ECO","CECO","Nombre tienda","Región","Compañía","Proveedor principal","Cuenta 1","Proveedor secundario","Cuenta 2"];
+  const lines=[h.join(","),...rows.map(r=>[r.eco,r.ceco,r.tienda,r.region,r.compania,r.pp,r.c1,r.ps,r.c2].map(x=>'"'+x+'"').join(","))];
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([lines.join("\n")],{type:"text/csv"}));a.download="tiendas.csv";a.click();
+}
+</script>
+</body>
+</html>
