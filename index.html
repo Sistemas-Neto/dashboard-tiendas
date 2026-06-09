@@ -488,7 +488,8 @@ let CEDIS_SHEET_NAME   = "";
 // Detect real sheet names from Sheets API
 async function detectSheetNames(){
   try{
-    const r = await fetch(\`https://sheets.googleapis.com/v4/spreadsheets/\${SPREADSHEET_ID}?key=\${API_KEY}\`);
+    const url0 = "https://sheets.googleapis.com/v4/spreadsheets/"+SPREADSHEET_ID+"?key="+API_KEY;
+    const r = await fetch(url0);
     const d = await r.json();
     if(d.sheets){
       d.sheets.forEach(s=>{
@@ -505,16 +506,12 @@ async function writeSheetData(sheetName, data, headers){
   if(!sheetName){toast("Error: nombre de hoja no detectado");return false;}
   try{
     // Clear existing data first
-    await fetch(
-      \`https://sheets.googleapis.com/v4/spreadsheets/\${SPREADSHEET_ID}/values/\${encodeURIComponent(sheetName)}!A:Z:clear\`,
-      {method:"POST", headers:{"Content-Type":"application/json","X-goog-api-key":API_KEY}}
-    );
+    const clearUrl = "https://sheets.googleapis.com/v4/spreadsheets/"+SPREADSHEET_ID+"/values/"+encodeURIComponent(sheetName)+"!A:Z:clear?key="+API_KEY;
+    await fetch(clearUrl, {method:"POST", headers:{"Content-Type":"application/json"}});
     // Write headers + data
     const values = [headers, ...data];
-    const resp = await fetch(
-      \`https://sheets.googleapis.com/v4/spreadsheets/\${SPREADSHEET_ID}/values/\${encodeURIComponent(sheetName)}!A1?valueInputOption=RAW&key=\${API_KEY}\`,
-      {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({values})}
-    );
+    const writeUrl = "https://sheets.googleapis.com/v4/spreadsheets/"+SPREADSHEET_ID+"/values/"+encodeURIComponent(sheetName)+"!A1?valueInputOption=RAW&key="+API_KEY;
+    const resp = await fetch(writeUrl, {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({values})});
     const result = await resp.json();
     if(result.error) throw new Error(result.error.message);
     return true;
