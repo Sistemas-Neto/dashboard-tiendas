@@ -898,7 +898,8 @@ function buildCharts(){
   const total=data.reduce((a,b)=>a+b,0)||1;
 
   // Legend: compact pills
-  document.getElementById("lBar").innerHTML=labels.map((l,i)=>
+  const lBarEl = document.getElementById("lBar");
+  if(lBarEl) lBarEl.innerHTML=labels.map((l,i)=>
     '<span class="legend-item"><span class="ldot" style="background:'+colors[i]+'"></span><span style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle" title="'+l+'">'+l+'</span> <strong>'+data[i]+'</strong></span>'
   ).join("");
 // dona chart removed
@@ -907,8 +908,10 @@ function buildCharts(){
     setTimeout(buildCharts, 300);
     return;
   }
+  const cBarEl = document.getElementById("cBar");
+  if(!cBarEl){ setTimeout(buildCharts, 300); return; }
   if(bChart)bChart.destroy();
-  bChart=new Chart(document.getElementById("cBar"),{
+  bChart=new Chart(cBarEl,{
     type:"bar",
     data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,borderRadius:5}]},
     options:{
@@ -934,7 +937,7 @@ function buildSecChart(){
   const hasSec=Object.keys(sc).length>0;
   document.getElementById("secWrap").style.display=hasSec?"block":"none";
   document.getElementById("noSec").style.display=hasSec?"none":"block";
-  if(!hasSec){if(sChart){sChart.destroy();sChart=null;}document.getElementById("lSec").innerHTML="";return;}
+  if(!hasSec){if(sChart){sChart.destroy();sChart=null;}const lSecX=document.getElementById("lSec");if(lSecX)lSecX.innerHTML="";return;}
 
   const labels=Object.keys(sc).sort((a,b)=>sc[b]-sc[a]);
   const data=labels.map(l=>sc[l]);
@@ -944,14 +947,16 @@ function buildSecChart(){
   // Info pill: total con secundario
   const totalConSec=rows.filter(r=>r.ps).length;
   const pct=Math.round(totalConSec/rows.length*100);
-  document.getElementById("lSec").innerHTML=
+  const lSecEl=document.getElementById("lSec"); if(lSecEl) lSecEl.innerHTML=
     '<div style="font-size:11px;color:#8896A8;margin-bottom:6px;">'+totalConSec+' de '+rows.length+' tiendas tienen enlace secundario <strong style="color:var(--orange)">'+pct+'%</strong></div>'+
     labels.map((l,i)=>
       '<span class="legend-item"><span class="ldot" style="background:'+colors[i%colors.length]+'"></span><span style="max-width:85px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle" title="'+l+'">'+l+'</span> <strong>'+data[i]+'</strong></span>'
     ).join("");
 
+  const cSecEl=document.getElementById("cSec");
+  if(!cSecEl)return;
   if(sChart)sChart.destroy();
-  sChart=new Chart(document.getElementById("cSec"),{
+  sChart=new Chart(cSecEl,{
     type:"bar",
     data:{labels,datasets:[{data,backgroundColor:colors.slice(0,labels.length),borderWidth:0,borderRadius:5}]},
     options:{
@@ -972,9 +977,9 @@ function buildBreakdown(){
   const cias=[...new Set(rows.map(r=>r.compania).filter(x=>x&&x!=="—"))].sort();
   const provs=[...new Set(rows.map(r=>r.pp).filter(Boolean))].sort((a,b)=>rows.filter(r=>r.pp===b).length-rows.filter(r=>r.pp===a).length);
   const colors={};provs.forEach((p,i)=>colors[p]=PAL[i%PAL.length]);
-  document.getElementById("bHead").innerHTML='<th>Compañía</th>'+provs.map(p=>'<th style="text-align:center">'+p+'</th>').join('')+'<th style="text-align:center">Total</th>';
+  const bHeadEl=document.getElementById("bHead"); if(!bHeadEl)return; bHeadEl.innerHTML='<th>Compañía</th>'+provs.map(p=>'<th style="text-align:center">'+p+'</th>').join('')+'<th style="text-align:center">Total</th>';
   const tots={};provs.forEach(p=>tots[p]=0);let grand=0;
-  document.getElementById("bBody").innerHTML=cias.map(cia=>{
+  const bBodyEl=document.getElementById("bBody"); if(!bBodyEl)return; bBodyEl.innerHTML=cias.map(cia=>{
     const cr=rows.filter(r=>r.compania===cia);const rt=cr.length;grand+=rt;
     const cells=provs.map(p=>{
       const cnt=cr.filter(r=>r.pp===p).length;tots[p]=(tots[p]||0)+cnt;
