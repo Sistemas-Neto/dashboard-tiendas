@@ -5,19 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard de tiendas</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
-// Load Chart.js with fallback
-(function(){
-  var s=document.createElement('script');
-  s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
-  s.onerror=function(){
-    var s2=document.createElement('script');
-    s2.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
-    document.head.appendChild(s2);
-  };
-  document.head.appendChild(s);
-})();
-</script>
+<!-- Chart.js loaded inline below -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F2F5FA;}@keyframes spin{to{transform:rotate(360deg);}}
@@ -605,6 +593,133 @@ async function loadFromOneDrive(){
   }
 }
 
+
+// ============ Minimal Chart Implementation (no CDN needed) ============
+const Chart = (function(){
+  function Chart(canvas, config){
+    this.canvas = canvas;
+    this.config = config;
+    this.ctx = canvas.getContext('2d');
+    this._draw();
+  }
+  Chart.prototype.destroy = function(){ 
+    const ctx = this.ctx;
+    ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+  };
+  Chart.prototype._draw = function(){
+    const cfg = this.config;
+    if(cfg.type === 'bar') this._drawBar();
+    else if(cfg.type === 'doughnut') this._drawDoughnut();
+  };
+  Chart.prototype._drawBar = function(){
+    const cfg = this.config;
+    const canvas = this.canvas;
+    const ctx = this.ctx;
+    const isHorizontal = cfg.options && cfg.options.indexAxis === 'y';
+    const labels = cfg.data.labels;
+    const data = cfg.data.datasets[0].data;
+    const colors = cfg.data.datasets[0].backgroundColor;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.parentElement.offsetWidth || 400;
+    const H = canvas.parentElement.offsetHeight || 240;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0,0,W,H);
+    const max = Math.max(...data) || 1;
+    const pad = {top:10, right:20, bottom:10, left: isHorizontal ? 120 : 30};
+    const chartW = W - pad.left - pad.right;
+    const chartH = H - pad.top - pad.bottom;
+    const n = labels.length;
+    const barH = isHorizontal ? Math.min(28, (chartH / n) - 6) : 0;
+    const gap = isHorizontal ? ((chartH / n) - barH) : 0;
+    ctx.font = '11px -apple-system,sans-serif';
+    ctx.fillStyle = '#8896A8';
+    if(isHorizontal){
+      labels.forEach((lbl,i)=>{
+        const y = pad.top + i*(barH+gap) + barH/2 + 4;
+        const x = pad.left - 6;
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#4A5568';
+        // truncate label
+        const maxLbl = 18;
+        const shortLbl = lbl.length > maxLbl ? lbl.substring(0,maxLbl)+'…' : lbl;
+        ctx.fillText(shortLbl, x, y);
+        const barW = (data[i] / max) * chartW;
+        ctx.fillStyle = Array.isArray(colors) ? colors[i] : colors;
+        ctx.beginPath();
+        const bx = pad.left, by = pad.top + i*(barH+gap);
+        const radius = 3;
+        ctx.moveTo(bx + radius, by);
+        ctx.lineTo(bx + barW - radius, by);
+        ctx.arcTo(bx+barW, by, bx+barW, by+radius, radius);
+        ctx.lineTo(bx+barW, by+barH-radius);
+        ctx.arcTo(bx+barW, by+barH, bx+barW-radius, by+barH, radius);
+        ctx.lineTo(bx+radius, by+barH);
+        ctx.arcTo(bx, by+barH, bx, by+barH-radius, radius);
+        ctx.lineTo(bx, by+radius);
+        ctx.arcTo(bx, by, bx+radius, by, radius);
+        ctx.closePath();
+        ctx.fill();
+        // value label
+        ctx.fillStyle = '#0B1F3A';
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 11px -apple-system,sans-serif';
+        ctx.fillText(data[i], bx + barW + 5, by + barH/2 + 4);
+        ctx.font = '11px -apple-system,sans-serif';
+      });
+    }
+  };
+  Chart.prototype._drawDoughnut = function(){
+    const cfg = this.config;
+    const canvas = this.canvas;
+    const ctx = this.ctx;
+    const labels = cfg.data.labels;
+    const data = cfg.data.datasets[0].data;
+    const colors = cfg.data.datasets[0].backgroundColor;
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.parentElement.offsetWidth || 300;
+    const H = canvas.parentElement.offsetHeight || 200;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0,0,W,H);
+    const total = data.reduce((a,b)=>a+b,0) || 1;
+    const cx = W/2, cy = H/2;
+    const outerR = Math.min(cx,cy) - 10;
+    const cutout = parseFloat((cfg.options&&cfg.options.cutout)||'60%') / 100;
+    const innerR = outerR * cutout;
+    let angle = -Math.PI/2;
+    data.forEach((val,i)=>{
+      const slice = (val/total) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(angle)*innerR, cy + Math.sin(angle)*innerR);
+      ctx.arc(cx, cy, outerR, angle, angle+slice);
+      ctx.arc(cx, cy, innerR, angle+slice, angle, true);
+      ctx.closePath();
+      ctx.fillStyle = colors[i] || '#ccc';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      angle += slice;
+    });
+    // center text
+    ctx.fillStyle = '#0B1F3A';
+    ctx.font = 'bold 20px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(total, cx, cy+4);
+    ctx.fillStyle = '#8896A8';
+    ctx.font = '11px -apple-system,sans-serif';
+    ctx.fillText('total', cx, cy+18);
+  };
+  return Chart;
+})();
+// ============ End Chart Implementation ============
 // Contraseñas almacenadas como hash SHA-256 (no reversible)
 const USERS={
   "admin":{hash:"8282ab45011ed0ff49258c88c9c8948bc0f5d67f07729aedab7c42fd8af0f716",role:"admin",label:"Administrador"},
@@ -766,7 +881,7 @@ function buildCharts(){
   ).join("");
 
   if(typeof Chart === 'undefined'){
-    setTimeout(buildCharts, 500);
+    setTimeout(buildCharts, 300);
     return;
   }
   if(bChart)bChart.destroy();
