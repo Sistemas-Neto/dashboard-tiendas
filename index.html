@@ -271,8 +271,16 @@ svg.ico{display:inline-block;vertical-align:middle;flex-shrink:0;}
       </div>
 
       <div id="grafView" style="display:none">
-        <p class="page-title">Resumen general</p>
-        <p class="page-sub">Distribución y desglose de proveedores de internet</p>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;">
+          <div>
+            <p class="page-title" style="margin-bottom:3px;">Resumen general</p>
+            <p style="font-size:13px;color:var(--text2);">Distribución y desglose de proveedores de internet</p>
+          </div>
+          <button onclick="buildCharts();buildBreakdown();" style="font-size:12px;padding:6px 13px;border-radius:8px;border:1px solid var(--border);background:#fff;color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:5px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Actualizar gráficas
+          </button>
+        </div>
         <div class="stats">
           <div class="stat stat-blue">
             <div class="stat-icon si-blue"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M3 9a2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2 2 2 0 0 0 2 2 2 2 0 0 0 2-2"/><path d="M5 11v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/><path d="M10 15h4v4h-4z"/></svg></div>
@@ -292,9 +300,9 @@ svg.ico{display:inline-block;vertical-align:middle;flex-shrink:0;}
           </div>
         </div>
         <div class="charts-row">
-          <div class="panel"><div class="panel-title">Tiendas por proveedor principal</div><div class="legend" id="lBar"></div><div style="position:relative;width:100%;height:240px;"><canvas id="cBar"></canvas></div></div>
+          <div class="panel"><div class="panel-title">Tiendas por proveedor principal</div><div class="legend" id="lBar"></div><div style="position:relative;width:100%;height:240px;"><canvas id="cBar" style="display:block;"></canvas></div></div>
 
-          <div class="panel"><div class="panel-title">Proveedores secundarios</div><div class="legend" id="lSec"></div><div id="secWrap" style="position:relative;width:100%;height:220px;"><canvas id="cSec"></canvas></div><div id="noSec" style="display:none;text-align:center;padding-top:2.5rem;font-size:13px;color:#8896A8;">Sin datos de proveedor secundario</div></div>
+          <div class="panel"><div class="panel-title">Proveedores secundarios</div><div class="legend" id="lSec"></div><div id="secWrap" style="position:relative;width:100%;height:220px;display:block;"><canvas id="cSec"></canvas></div><div id="noSec" style="display:none;text-align:center;padding-top:2.5rem;font-size:13px;color:#8896A8;">Sin datos de proveedor secundario</div></div>
         </div>
         <div class="panel">
           <div class="panel-title">Desglose por compañía y proveedor</div>
@@ -620,8 +628,8 @@ const Chart = (function(){
     const data = cfg.data.datasets[0].data;
     const colors = cfg.data.datasets[0].backgroundColor;
     const dpr = window.devicePixelRatio || 1;
-    const W = canvas.parentElement.offsetWidth || 400;
-    const H = canvas.parentElement.offsetHeight || 240;
+    const W = Math.max(canvas.parentElement.offsetWidth, canvas.offsetWidth, 380);
+    const H = Math.max(canvas.parentElement.offsetHeight, canvas.offsetHeight, 220);
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     canvas.style.width = W + 'px';
@@ -680,8 +688,8 @@ const Chart = (function(){
     const data = cfg.data.datasets[0].data;
     const colors = cfg.data.datasets[0].backgroundColor;
     const dpr = window.devicePixelRatio || 1;
-    const W = canvas.parentElement.offsetWidth || 300;
-    const H = canvas.parentElement.offsetHeight || 200;
+    const W = Math.max(canvas.parentElement.offsetWidth, canvas.offsetWidth, 300);
+    const H = Math.max(canvas.parentElement.offsetHeight, canvas.offsetHeight, 200);
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     canvas.style.width = W + 'px';
@@ -720,6 +728,20 @@ const Chart = (function(){
   return Chart;
 })();
 // ============ End Chart Implementation ============
+
+// Redraw charts on window resize
+window.addEventListener('resize', function(){
+  if(rows.length && document.getElementById('grafView').style.display !== 'none'){
+    buildCharts();
+  }
+});
+
+// Force redraw after full page load
+window.addEventListener('load', function(){
+  if(rows.length){
+    setTimeout(function(){ buildCharts(); buildBreakdown(); }, 100);
+  }
+});
 // Contraseñas almacenadas como hash SHA-256 (no reversible)
 const USERS={
   "admin":{hash:"8282ab45011ed0ff49258c88c9c8948bc0f5d67f07729aedab7c42fd8af0f716",role:"admin",label:"Administrador"},
@@ -790,8 +812,7 @@ function setView(v){
   if(v==="tiendas")renderT();
   if(v==="cedis")renderC();
   if(v==="graf"&&rows.length){
-    // Rebuild charts when switching back to graficas view
-    setTimeout(()=>{buildCharts();buildBreakdown();},50);
+    requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ buildCharts();buildBreakdown(); }); });
   }
 }
 function dov(e){e.preventDefault();document.getElementById("dropZone").style.borderColor="#163660";}
@@ -843,7 +864,13 @@ function initDash(fname){
   populateCedisFilters();
   updateStats();populateFilters();
   setView("graf");
-  setTimeout(()=>{buildCharts();buildBreakdown();},200);
+  // Wait for DOM to fully render before drawing charts
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      buildCharts();
+      buildBreakdown();
+    });
+  });
 }
 function resetData(){
   if(bChart){bChart.destroy();bChart=null;} if(sChart){sChart.destroy();sChart=null;}
