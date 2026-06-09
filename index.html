@@ -241,12 +241,12 @@ svg.ico{display:inline-block;vertical-align:middle;flex-shrink:0;}
     <div class="main">
       <div id="uploadView">
         <p class="page-title">Sincronizar datos</p>
-        <p class="page-sub">Conectando con tu archivo en OneDrive...</p>
+        <p class="page-sub">Conectando con Google Sheets...</p>
 
         <div id="loadingState" style="text-align:center;padding:3rem 1rem;">
           <div style="width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin 0.9s linear infinite;margin:0 auto 20px;"></div>
-          <p style="font-size:14px;color:var(--text2);font-weight:500;">Cargando Catalogo.xlsx desde OneDrive...</p>
-          <p style="font-size:12px;color:var(--text3);margin-top:6px;">Esto puede tardar unos segundos</p>
+          <p style="font-size:14px;color:var(--text2);font-weight:500;">Conectando con Google Sheets...</p>
+          <p style="font-size:12px;color:var(--text3);margin-top:6px;">Cargando datos actualizados...</p>
         </div>
 
         <div id="errorState" style="display:none;text-align:center;padding:2rem 1rem;">
@@ -477,8 +477,69 @@ svg.ico{display:inline-block;vertical-align:middle;flex-shrink:0;}
 <div class="toast" id="toast"></div>
 
 <script>
-// URL de descarga directa del archivo en OneDrive
-const ONEDRIVE_URL = "https://api.onedrive.com/v1.0/shares/u!aHR0cHM6Ly8xZHJ2Lm1zL3gvYy82MkQ5MTY1RDM4RDk1NjA0L0lRQUhmLWJzUWdyNFFxVW9wNlRQWl8tckFUVk1hdUlCZlgweExMamVBRExyY0JZP2U9Tklyb1p2/root/content";
+// Configuración Google Sheets
+const SPREADSHEET_ID = "1oPBj1XTeJRx63sExEeHnu6ZQMdGBJt_5T8pSjfIzN84";
+const API_KEY        = "AIzaSyCKAAzKSGQWbk6BKMJvYmfNiltXIApsSBY";
+const TIENDAS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5QEi1PaviBybeBPFd7fKp8bwQULM2w-rg_bBSNZclrHDZgsxBR2SBmTB96Jz9yCyXnkTkfHN0NeCq/pub?gid=1511924898&single=true&output=csv";
+const CEDIS_URL   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5QEi1PaviBybeBPFd7fKp8bwQULM2w-rg_bBSNZclrHDZgsxBR2SBmTB96Jz9yCyXnkTkfHN0NeCq/pub?gid=1172735987&single=true&output=csv";
+let TIENDAS_SHEET_NAME = "";
+let CEDIS_SHEET_NAME   = "";
+
+// Detect real sheet names from Sheets API
+async function detectSheetNames(){
+  try{
+    const r = await fetch(\`https://sheets.googleapis.com/v4/spreadsheets/\${SPREADSHEET_ID}?key=\${API_KEY}\`);
+    const d = await r.json();
+    if(d.sheets){
+      d.sheets.forEach(s=>{
+        const t = s.properties.title.toLowerCase();
+        if(t.includes("cedis")) CEDIS_SHEET_NAME = s.properties.title;
+        else if(!TIENDAS_SHEET_NAME) TIENDAS_SHEET_NAME = s.properties.title;
+      });
+    }
+  }catch(e){console.warn("No se pudo detectar hojas:",e);}
+}
+
+// Write rows to Google Sheets via API
+async function writeSheetData(sheetName, data, headers){
+  if(!sheetName){toast("Error: nombre de hoja no detectado");return false;}
+  try{
+    // Clear existing data first
+    await fetch(
+      \`https://sheets.googleapis.com/v4/spreadsheets/\${SPREADSHEET_ID}/values/\${encodeURIComponent(sheetName)}!A:Z:clear\`,
+      {method:"POST", headers:{"Content-Type":"application/json","X-goog-api-key":API_KEY}}
+    );
+    // Write headers + data
+    const values = [headers, ...data];
+    const resp = await fetch(
+      \`https://sheets.googleapis.com/v4/spreadsheets/\${SPREADSHEET_ID}/values/\${encodeURIComponent(sheetName)}!A1?valueInputOption=RAW&key=\${API_KEY}\`,
+      {method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify({values})}
+    );
+    const result = await resp.json();
+    if(result.error) throw new Error(result.error.message);
+    return true;
+  }catch(e){
+    console.error("Error escribiendo en Sheets:",e);
+    toast("Error al guardar: "+e.message);
+    return false;
+  }
+}
+
+async function saveTiendas(){
+  if(!TIENDAS_SHEET_NAME){toast("Cargando datos primero...");return;}
+  const headers=["ECO","CECO","NOMBRE TIENDA - NETO","NOMBRE REGIÓN","COMPAÑÍA","PROVEEDOR PRINCIPAL","CUENTA 1","PROVEEDOR SECUNDARIO","CUENTA 2"];
+  const data=rows.map(r=>[r.eco,r.ceco,r.tienda,r.region,r.compania,r.pp,r.c1,r.ps,r.c2]);
+  const ok = await writeSheetData(TIENDAS_SHEET_NAME, data, headers);
+  if(ok) toast("✓ Cambios guardados en Google Sheets");
+}
+
+async function saveCedis(){
+  if(!CEDIS_SHEET_NAME){toast("Cargando datos primero...");return;}
+  const headers=["ECO","SITIO","TIPO","COMPAÑÍA","PROVEEDOR 1","CUENTA 1","PROVEEDOR 2","CUENTA 2","PROVEEDOR 3","CUENTA 3"];
+  const data=cedisRows.map(r=>[r.eco,r.sitio,r.tipo,r.cia,r.p1,r.c1,r.p2,r.c2,r.p3,r.c3]);
+  const ok = await writeSheetData(CEDIS_SHEET_NAME, data, headers);
+  if(ok) toast("✓ Cambios guardados en Google Sheets");
+}
 
 function showManual(){
   document.getElementById("loadingState").style.display="none";
@@ -486,23 +547,61 @@ function showManual(){
   document.getElementById("manualState").style.display="block";
 }
 
+function csvToJson(csv){
+  const lines=csv.trim().split("\n");
+  if(lines.length<2)return[];
+  const headers=lines[0].split(",").map(h=>h.replace(/^"|"$/g,"").trim());
+  return lines.slice(1).map(line=>{
+    const vals=[];let cur="",inQ=false;
+    for(let i=0;i<line.length;i++){
+      if(line[i]==='"'){inQ=!inQ;}
+      else if(line[i]===","&&!inQ){vals.push(cur.trim());cur="";}
+      else cur+=line[i];
+    }
+    vals.push(cur.trim());
+    const obj={};headers.forEach((h,i)=>obj[h]=(vals[i]||"").replace(/^"|"$/g,""));
+    return obj;
+  });
+}
+
 async function loadFromOneDrive(){
   document.getElementById("loadingState").style.display="block";
   document.getElementById("errorState").style.display="none";
   document.getElementById("manualState").style.display="none";
+  await detectSheetNames();
   try{
-    const resp = await fetch(ONEDRIVE_URL);
-    if(!resp.ok) throw new Error("Error "+resp.status+": "+resp.statusText);
-    const buf = await resp.arrayBuffer();
-    const wb = XLSX.read(buf,{type:"array"});
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const raw = XLSX.utils.sheet_to_json(ws,{defval:""});
-    if(!raw.length) throw new Error("La primera hoja está vacía.");
-    parseRows(raw,"Catalogo.xlsx (OneDrive)",wb);
+    const r1=await fetch(TIENDAS_URL);
+    if(!r1.ok)throw new Error("Error "+r1.status+" al cargar hoja Tiendas");
+    const csv1=await r1.text();
+    const raw=csvToJson(csv1);
+    if(!raw.length)throw new Error("La hoja de Tiendas está vacía.");
+    try{
+      const r2=await fetch(CEDIS_URL);
+      if(r2.ok){
+        const csv2=await r2.text();
+        const rawC=csvToJson(csv2);
+        if(rawC.length){
+          const sc=rawC[0];
+          cedisRows=rawC.map(r=>({
+            eco:gv(r,fc(sc,["eco"])),
+            sitio:gv(r,fc(sc,["sitio","nombre","site"]))||"—",
+            cia:gv(r,fc(sc,["compania","compañia","company","cia"]))||"—",
+            tipo:gv(r,fc(sc,["tipo","type"]))||"CEDIS",
+            p1:gv(r,fc(sc,["proveedor1","proveedor 1","principal"])),
+            c1:gv(r,fc(sc,["cuenta1","cuenta 1","cta1"])),
+            p2:gv(r,fc(sc,["proveedor2","proveedor 2","secundario"])),
+            c2:gv(r,fc(sc,["cuenta2","cuenta 2","cta2"])),
+            p3:gv(r,fc(sc,["proveedor3","proveedor 3"])),
+            c3:gv(r,fc(sc,["cuenta3","cuenta 3","cta3"])),
+          }));
+        }
+      }
+    }catch(e){console.warn("CEDIS:",e);}
+    parseRows(raw,"Google Sheets ✓");
   }catch(err){
     document.getElementById("loadingState").style.display="none";
     document.getElementById("errorState").style.display="block";
-    document.getElementById("errDetail").textContent=err.message||"No se pudo descargar el archivo.";
+    document.getElementById("errDetail").textContent=err.message||"No se pudo conectar con Google Sheets.";
   }
 }
 
@@ -550,7 +649,7 @@ async function login(){
     rp.className="rpill "+(isAdmin?"rp-admin":"rp-visor");
     document.getElementById("nav-export").style.display=can("export")?"flex":"none";
     // Auto-load OneDrive file after login
-    setTimeout(loadFromOneDrive, 300);
+    setTimeout(loadFromOneDrive, 300); // Auto-load desde Google Sheets
   }else{document.getElementById("lerr").style.display="block";document.getElementById("lp").value="";}
 }
 function logout(){
@@ -610,29 +709,8 @@ function parseRows(raw,fname,wb){
     ps:gv(r,fc(s,["proveedorsecundario","secundario"])),
     c2:gv(r,fc(s,["cuenta2","cta2"])),
   }));
-  // Read CEDIS sheet
-  cedisRows=[];
-  if(wb){
-    const cedisSheet=wb.SheetNames.find(n=>n.toLowerCase().includes("cedis"));
-    if(cedisSheet){
-      const rawC=XLSX.utils.sheet_to_json(wb.Sheets[cedisSheet],{defval:""});
-      if(rawC.length){
-        const sc=rawC[0];
-        cedisRows=rawC.map(r=>({
-          eco:gv(r,fc(sc,["eco"])),
-          sitio:gv(r,fc(sc,["sitio","nombre","site"]))||"—",
-          cia:gv(r,fc(sc,["compania","compañia","company","cia"]))||"—",
-          tipo:gv(r,fc(sc,["tipo","type"]))||"CEDIS",
-          p1:gv(r,fc(sc,["proveedor1","proveedor 1","principal","pp"])),
-          c1:gv(r,fc(sc,["cuenta1","cuenta 1","cta1"])),
-          p2:gv(r,fc(sc,["proveedor2","proveedor 2","secundario","ps"])),
-          c2:gv(r,fc(sc,["cuenta2","cuenta 2","cta2"])),
-          p3:gv(r,fc(sc,["proveedor3","proveedor 3"])),
-          c3:gv(r,fc(sc,["cuenta3","cuenta 3","cta3"])),
-        }));
-      }
-    }
-  }
+  // CEDIS se carga por separado desde Google Sheets en loadFromOneDrive
+  if(!cedisRows.length) cedisRows=[];
   initDash(fname);
 }
 function loadDemo(){rows=DEMO.map(r=>({...r}));cedisRows=[];initDash("demo — datos de ejemplo");}
@@ -804,12 +882,13 @@ function saveForm(){
   const n=document.getElementById("fN").value.trim();
   if(!n){document.getElementById("formErr").style.display="block";return;}
   const row={eco:document.getElementById("fE").value.trim(),ceco:document.getElementById("fC").value.trim(),tienda:n,region:document.getElementById("fR").value.trim()||"—",compania:document.getElementById("fCo").value.trim()||"—",pp:document.getElementById("fPp").value.trim(),c1:document.getElementById("fC1").value.trim(),ps:document.getElementById("fPs").value.trim(),c2:document.getElementById("fC2").value.trim()};
-  if(editIdx>=0){rows[editIdx]=row;toast("Tienda actualizada");}else{rows.push(row);toast("Tienda agregada");}
+  if(editIdx>=0){rows[editIdx]=row;}else{rows.push(row);}
   closeForm();updateStats();buildCharts();buildBreakdown();populateFilters();renderT();
+  saveTiendas();
 }
 function closeForm(){document.getElementById("formMod").classList.remove("open");}
 function openDel(i){delIdx=i;document.getElementById("delMsg").textContent='¿Confirmas que deseas eliminar "'+rows[i].tienda+'"? Esta acción no se puede deshacer.';document.getElementById("delMod").classList.add("open");}
-function confirmDel(){rows.splice(delIdx,1);closeDel();toast("Tienda eliminada");updateStats();buildCharts();buildBreakdown();populateFilters();renderT();}
+function confirmDel(){rows.splice(delIdx,1);closeDel();updateStats();buildCharts();buildBreakdown();populateFilters();renderT();saveTiendas();}
 function closeDel(){document.getElementById("delMod").classList.remove("open");delIdx=-1;}
 function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2800);}
 
@@ -864,12 +943,13 @@ function saveFormCedis(){
   const s=document.getElementById("fcS").value.trim();
   if(!s){document.getElementById("formCedisErr").style.display="block";return;}
   const row={eco:document.getElementById("fcE").value.trim(),sitio:s,tipo:document.getElementById("fcT").value,cia:document.getElementById("fcCo").value.trim()||"—",p1:document.getElementById("fcP1").value.trim(),c1:document.getElementById("fcC1").value.trim(),p2:document.getElementById("fcP2").value.trim(),c2:document.getElementById("fcC2").value.trim(),p3:document.getElementById("fcP3").value.trim(),c3:document.getElementById("fcC3").value.trim()};
-  if(cedisEditIdx>=0){cedisRows[cedisEditIdx]=row;toast("Registro actualizado");}else{cedisRows.push(row);toast("Registro agregado");}
+  if(cedisEditIdx>=0){cedisRows[cedisEditIdx]=row;}else{cedisRows.push(row);}
   closeFormCedis();populateCedisFilters();renderC();
+  saveCedis();
 }
 function closeFormCedis(){document.getElementById("formCedisMod").classList.remove("open");}
 function openDelCedis(i){cedisDelIdx=i;document.getElementById("delCedisMsg").textContent='¿Confirmas que deseas eliminar "'+cedisRows[i].sitio+'"? Esta acción no se puede deshacer.';document.getElementById("delCedisMod").classList.add("open");}
-function confirmDelCedis(){cedisRows.splice(cedisDelIdx,1);closeDelCedis();toast("Registro eliminado");populateCedisFilters();renderC();}
+function confirmDelCedis(){cedisRows.splice(cedisDelIdx,1);closeDelCedis();populateCedisFilters();renderC();saveCedis();}
 function closeDelCedis(){document.getElementById("delCedisMod").classList.remove("open");cedisDelIdx=-1;}
 function exportCSV(){
   if(!can("export"))return;
