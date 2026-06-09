@@ -792,7 +792,6 @@ async function login(){
 function logout(){
   cu=null;rows=[];
   if(bChart){bChart.destroy();bChart=null;} if(sChart){sChart.destroy();sChart=null;}
-  if(dChart){dChart.destroy();dChart=null;}
   document.getElementById("appPage").style.display="none";
   document.getElementById("loginPage").style.display="flex";
   document.getElementById("lu").value="";document.getElementById("lp").value="";
@@ -874,7 +873,6 @@ function initDash(fname){
 }
 function resetData(){
   if(bChart){bChart.destroy();bChart=null;} if(sChart){sChart.destroy();sChart=null;}
-  if(dChart){dChart.destroy();dChart=null;}
   rows=[];
   document.getElementById("grafView").style.display="none";
   document.getElementById("tiendasView").style.display="none";
@@ -903,9 +901,7 @@ function buildCharts(){
   document.getElementById("lBar").innerHTML=labels.map((l,i)=>
     '<span class="legend-item"><span class="ldot" style="background:'+colors[i]+'"></span><span style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle" title="'+l+'">'+l+'</span> <strong>'+data[i]+'</strong></span>'
   ).join("");
-  document.getElementById("lDona").innerHTML=labels.map((l,i)=>
-    '<span class="legend-item"><span class="ldot" style="background:'+colors[i]+'"></span><span style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle" title="'+l+'">'+l+'</span> <strong>'+Math.round(data[i]/total*100)+'%</strong></span>'
-  ).join("");
+// dona chart removed
 
   if(typeof Chart === 'undefined'){
     setTimeout(buildCharts, 300);
